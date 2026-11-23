@@ -1,11 +1,11 @@
 // Shell: login, layout e rotas do Controle de Validade.
-import { sb, sair, sessao, meuPerfil, entrar, minhasPermissoes } from './api.js?v=20261122c';
-import { SISTEMA } from './config.js?v=20261122c';
-import * as ui from './ui.js?v=20261122c';
-import * as dashboard from './views/dashboard.js?v=20261122c';
-import * as lojas from './views/lojas.js?v=20261122c';
-import * as lancar from './views/lancar.js?v=20261122c';
-import * as lista from './views/lista.js?v=20261122c';
+import { sb, sair, sessao, meuPerfil, entrar, minhasPermissoes } from './api.js?v=20261123a';
+import { SISTEMA } from './config.js?v=20261123a';
+import * as ui from './ui.js?v=20261123a';
+import * as dashboard from './views/dashboard.js?v=20261123a';
+import * as lojas from './views/lojas.js?v=20261123a';
+import * as lancar from './views/lancar.js?v=20261123a';
+import * as lista from './views/lista.js?v=20261123a';
 
 const app = document.getElementById('app');
 let perfil = null;

@@ -1,6 +1,6 @@
 // Escolha do estabelecimento (loja).
-import { listar } from '../api.js?v=20261122c';
-import * as ui from '../ui.js?v=20261122c';
+import { listar } from '../api.js?v=20261123a';
+import * as ui from '../ui.js?v=20261123a';
 
 export async function render(raiz, ctx) {
   ctx.setTitulo('Estabelecimentos');

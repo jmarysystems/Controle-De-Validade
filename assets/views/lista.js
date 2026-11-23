@@ -1,6 +1,6 @@
 // Produtos no controle de validade (quem tem acesso ao módulo vê e altera).
-import { listar, atualizar, excluir } from '../api.js?v=20261122c';
-import * as ui from '../ui.js?v=20261122c';
+import { listar, atualizar, excluir } from '../api.js?v=20261123a';
+import * as ui from '../ui.js?v=20261123a';
 
 const diasAte = (data) => {
   if (!data) return null;
@@ -63,6 +63,15 @@ export async function render(raiz, ctx, lojaId) {
             ${[...new Set(itens.map((i) => i.categoria).filter(Boolean))]
               .sort().map((c) => `<option value="${ui.esc(c)}">${ui.esc(c)}</option>`).join('')}
           </select></label>
+        <label class="campo"><span>Situação</span>
+          <select id="filtro-situacao">
+            <option value="">Todas</option>
+            <option value="vencidos">Vencidos</option>
+            <option value="hoje">Vence hoje</option>
+            <option value="30">Vencendo em até 30 dias</option>
+            <option value="fora">Mais de 30 dias</option>
+            <option value="sem">Sem data</option>
+          </select></label>
         <label class="campo"><span>Pesquisar</span>
           <input type="search" id="busca" placeholder="EAN, SKU ou descrição"></label>
       </div>
@@ -72,6 +81,7 @@ export async function render(raiz, ctx, lojaId) {
 
   const selLoja = raiz.querySelector('#filtro-loja');
   const selCategoria = raiz.querySelector('#filtro-categoria');
+  const selSituacao = raiz.querySelector('#filtro-situacao');
   const busca = raiz.querySelector('#busca');
   const tabela = raiz.querySelector('#tabela');
   const contador = raiz.querySelector('#contador');
@@ -81,9 +91,21 @@ export async function render(raiz, ctx, lojaId) {
     const loja = selLoja.value;
     const categoria = selCategoria.value;
 
+    const situacaoEscolhida = selSituacao.value;
+
     return itens.filter((i) => {
       if (loja && i.loja_id !== loja) return false;
       if (categoria && i.categoria !== categoria) return false;
+
+      if (situacaoEscolhida) {
+        const dias = diasAte(i.data_vencimento);
+        if (situacaoEscolhida === 'sem' && dias !== null) return false;
+        if (situacaoEscolhida === 'vencidos' && !(dias !== null && dias < 0)) return false;
+        if (situacaoEscolhida === 'hoje' && dias !== 0) return false;
+        if (situacaoEscolhida === '30' && !(dias !== null && dias > 0 && dias <= 30)) return false;
+        if (situacaoEscolhida === 'fora' && !(dias !== null && dias > 30)) return false;
+      }
+
       if (!termo) return true;
       return `${i.ean || ''} ${i.sku || ''} ${i.descricao || ''}`.toLowerCase().includes(termo);
     });
@@ -241,6 +263,7 @@ export async function render(raiz, ctx, lojaId) {
 
   selLoja.addEventListener('change', desenhar);
   selCategoria.addEventListener('change', desenhar);
+  selSituacao.addEventListener('change', desenhar);
   busca.addEventListener('input', desenhar);
   desenhar();
 }

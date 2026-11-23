@@ -1,6 +1,6 @@
 // Dashboard do Controle de Validade.
-import { listar } from '../api.js?v=20261122c';
-import * as ui from '../ui.js?v=20261122c';
+import { listar } from '../api.js?v=20261123a';
+import * as ui from '../ui.js?v=20261123a';
 
 const diasAte = (data) => {
   if (!data) return null;
