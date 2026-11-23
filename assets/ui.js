@@ -81,3 +81,7 @@ export function dadosDoForm(form) {
   }
   return dados;
 }
+
+// etiqueta colorida: vermelho, verde, amarelo, laranja, azul ou neutro
+export const badge = (texto, cor = 'neutro') =>
+  `<span class="badge badge-${esc(cor)}">${esc(texto)}</span>`;

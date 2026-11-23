@@ -1,6 +1,6 @@
 // Produtos no controle de validade (quem tem acesso ao módulo vê e altera).
-import { listar, atualizar, excluir } from '../api.js?v=20261122b';
-import * as ui from '../ui.js?v=20261122b';
+import { listar, atualizar, excluir } from '../api.js?v=20261122c';
+import * as ui from '../ui.js?v=20261122c';
 
 const diasAte = (data) => {
   if (!data) return null;
