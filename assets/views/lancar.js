@@ -1,6 +1,6 @@
 // Lançar produto no controle de validade (por EAN/SKU).
-import { listar, criar } from '../api.js?v=20261123a';
-import * as ui from '../ui.js?v=20261123a';
+import { listar, criar } from '../api.js?v=20261123b';
+import * as ui from '../ui.js?v=20261123b';
 
 export async function render(raiz, ctx, lojaId) {
   ctx.setTitulo('Lançar produto');

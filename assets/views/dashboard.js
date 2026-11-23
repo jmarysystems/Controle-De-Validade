@@ -1,6 +1,6 @@
 // Dashboard do Controle de Validade.
-import { listar } from '../api.js?v=20261123a';
-import * as ui from '../ui.js?v=20261123a';
+import { listar } from '../api.js?v=20261123b';
+import * as ui from '../ui.js?v=20261123b';
 
 const diasAte = (data) => {
   if (!data) return null;
@@ -10,42 +10,90 @@ const diasAte = (data) => {
   return Math.round((alvo - hoje) / 86400000);
 };
 
+const mesDe = (data) => {
+  if (!data) return 'Sem data';
+  const [ano, mes] = String(data).split('-');
+  return `${mes}/${ano}`;
+};
+
 export async function render(raiz, ctx) {
   ctx.setTitulo('Dashboard');
 
-  const [itens, lojas] = await Promise.all([
+  const [itens, lojas, vinculos] = await Promise.all([
     listar('val_itens', { ordem: 'data_vencimento' }),
     listar('arm_lojas', { ordem: 'nome' }),
+    listar('produto_por_fornecedor', { select: 'produto_id, fornecedores(razao_social)' }),
   ]);
 
-  const porLoja = new Map();
-  let vencidos = 0;
-  let vencendo = 0;
-  let aguardando = 0;
-
-  for (const item of itens) {
-    const dias = diasAte(item.data_vencimento);
-    const chave = item.loja_id || 'sem';
-    const atual = porLoja.get(chave) || { itens: 0, vencidos: 0, vencendo: 0 };
-    atual.itens += 1;
-    porLoja.set(chave, atual);
-
-    if (dias !== null && dias < 0) { vencidos += 1; atual.vencidos += 1; }
-    else if (dias !== null && dias <= 30) { vencendo += 1; atual.vencendo += 1; }
-    if (item.status === 'aguardando') aguardando += 1;
+  const fornecedorDoProduto = new Map();
+  for (const v of vinculos) {
+    if (v.produto_id) {
+      fornecedorDoProduto.set(v.produto_id, v.fornecedores?.razao_social || null);
+    }
   }
 
   const nomeLoja = new Map(lojas.map((l) => [l.id, l.nome]));
 
-  const linhas = [...porLoja.entries()]
-    .map(([id, d]) => ({ nome: nomeLoja.get(id) || 'Sem loja', ...d }))
-    .sort((a, b) => b.itens - a.itens)
-    .map((d) => `<tr>
-      <td>${ui.esc(d.nome)}</td>
-      <td class="num">${ui.num(d.itens, 0)}</td>
-      <td class="num">${ui.num(d.vencendo, 0)}</td>
-      <td class="num">${ui.num(d.vencidos, 0)}</td>
-    </tr>`).join('');
+  const porLoja = new Map();
+  const porMes = new Map();
+  const porCategoria = new Map();
+  const porFornecedor = new Map();
+
+  let vencidos = 0;
+  let vencendo = 0;
+  let aguardando = 0;
+
+  const somar = (mapa, chave, item, extras = {}) => {
+    const atual = mapa.get(chave) || { itens: 0, quantidade: 0, ...extras };
+    atual.itens += 1;
+    atual.quantidade += Number(item.quantidade) || 0;
+    if (extras.vencidos !== undefined) {
+      const dias = diasAte(item.data_vencimento);
+      if (dias !== null && dias < 0) atual.vencidos += 1;
+      else if (dias !== null && dias <= 30) atual.vencendo += 1;
+    }
+    mapa.set(chave, atual);
+    return atual;
+  };
+
+  for (const item of itens) {
+    const dias = diasAte(item.data_vencimento);
+
+    somar(porLoja, item.loja_id || 'sem', item, { vencidos: 0, vencendo: 0 });
+    somar(porMes, mesDe(item.data_vencimento), item);
+    somar(porCategoria, item.categoria || 'Sem categoria', item);
+    somar(porFornecedor, fornecedorDoProduto.get(item.produto_id) || 'Sem fornecedor', item);
+
+    if (dias !== null && dias < 0) vencidos += 1;
+    else if (dias !== null && dias <= 30) vencendo += 1;
+    if (item.status === 'aguardando') aguardando += 1;
+  }
+
+  const tabela = (titulo, mapa, comVencimento = false) => {
+    const linhas = [...mapa.entries()]
+      .sort((a, b) => b[1].itens - a[1].itens || a[0].localeCompare(b[0]))
+      .map(([nome, d]) => `<tr>
+        <td>${ui.esc(comVencimento && nome === 'sem' ? 'Sem loja' : nome)}</td>
+        <td class="num">${ui.num(d.itens, 0)}</td>
+        <td class="num">${ui.num(d.quantidade, 2)}</td>
+        ${comVencimento ? `<td class="num">${ui.num(d.vencendo, 0)}</td>
+          <td class="num">${ui.num(d.vencidos, 0)}</td>` : ''}
+      </tr>`).join('');
+
+    return `<div class="cartao">
+      <h2>${ui.esc(titulo)}</h2>
+      ${mapa.size ? `<div class="tabela-rolagem"><table>
+        <thead><tr><th>${ui.esc(titulo.replace('Por ', '').replace('por ', ''))}</th>
+          <th class="num">Itens</th><th class="num">Quantidade</th>
+          ${comVencimento ? '<th class="num">Vencendo</th><th class="num">Vencidos</th>' : ''}
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table></div>` : ui.vazio('Nenhum item no controle de validade ainda.')}
+    </div>`;
+  };
+
+  const lojasOrdenadas = new Map(
+    [...porLoja.entries()].map(([id, d]) => [nomeLoja.get(id) || 'Sem loja', d]));
 
   raiz.innerHTML = `
     <div class="kpis">
@@ -71,12 +119,9 @@ export async function render(raiz, ctx) {
       </div>
     </div>
 
-    <div class="cartao">
-      <h2>Por estabelecimento</h2>
-      ${porLoja.size ? `<div class="tabela-rolagem"><table>
-        <thead><tr><th>Estabelecimento</th><th class="num">Itens</th>
-          <th class="num">Vencendo</th><th class="num">Vencidos</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table></div>` : ui.vazio('Nenhum produto no controle de validade ainda.')}
-    </div>`;
+    ${tabela('Por estabelecimento', lojasOrdenadas, true)}
+    ${tabela('Por mês de vencimento', porMes)}
+    ${tabela('Por categoria', porCategoria)}
+    ${tabela('Por fornecedor', porFornecedor)}
+  `;
 }
